@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f0c040">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Énergie">
+<meta name="description" content="Simulateur de coût énergétique sur 10 ans">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Calculateur Énergie</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --accent: #f0c040;
+    --accent2: #e07030;
+    --text: #e8eaf0;
+    --text-muted: #6b7a99;
+    --border: #1f2d45;
+    --red: #f87171;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Mono', 'Courier New', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px 60px;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(240,192,64,0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(224,112,48,0.06), transparent);
+  }
+
+  .container { max-width: 900px; margin: 0 auto; }
+
+  header { margin-bottom: 40px; animation: fadeDown 0.6s ease both; }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(240,192,64,0.1);
+    border: 1px solid rgba(240,192,64,0.25);
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle { margin-top: 10px; color: var(--text-muted); font-size: 13px; letter-spacing: 0.05em; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.15s; }
+  .card:nth-child(4) { animation-delay: 0.2s; }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .inputs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 600px) { .inputs-grid { grid-template-columns: 1fr; } }
+  @media (min-width: 601px) and (max-width: 780px) { .inputs-grid { grid-template-columns: 1fr 1fr; } }
+
+  .input-group { display: flex; flex-direction: column; gap: 8px; }
+
+  label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+
+  .input-wrapper { position: relative; display: flex; align-items: center; }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'DM Mono', 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    padding: 13px 56px 13px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(240,192,64,0.1);
+  }
+
+  #rate { border-color: rgba(240,192,64,0.3); color: var(--accent); }
+  #rate:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(240,192,64,0.15); }
+
+  .unit { position: absolute; right: 12px; font-size: 11px; color: var(--text-muted); pointer-events: none; }
+
+  .slider-group { margin-top: 16px; padding-top: 18px; border-top: 1px solid var(--border); }
+
+  .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+  .slider-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+
+  .slider-value { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent); }
+
+  .slider-presets { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+
+  .preset-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 11px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(240,192,64,0.06); }
+  .preset-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(240,192,64,0.1); }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--accent);
+    transition: transform 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 3px solid var(--bg);
+  }
+
+  .slider-ticks { display: flex; justify-content: space-between; margin-top: 7px; }
+  .tick { font-size: 10px; color: var(--text-muted); }
+
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 560px) { .summary { grid-template-columns: 1fr; } }
+
+  .stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px;
+    transition: transform 0.2s;
+  }
+
+  .stat:hover { transform: translateY(-2px); }
+  .stat-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 7px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 1.45rem; font-weight: 700; color: var(--accent); }
+  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .table-wrapper { overflow-x: auto; border-radius: 6px; border: 1px solid var(--border); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+  thead tr { background: var(--surface2); border-bottom: 1px solid var(--border); }
+
+  th {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 13px 16px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  th:first-child { text-align: left; }
+
+  tbody tr { border-bottom: 1px solid rgba(31,45,69,0.5); transition: background 0.15s; animation: rowIn 0.4s ease both; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+  td { padding: 14px 16px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td:first-child { text-align: left; }
+
+  .year-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  td.price-col { color: var(--text-muted); }
+  td.cost-col { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; color: var(--text); }
+  td.delta-col { color: var(--red); font-size: 12px; }
+  td.cumul-col { color: var(--accent2); font-weight: 500; }
+
+  .bar-cell { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .bar-bg { width: 70px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--red)); border-radius: 3px; transition: width 0.5s ease; }
+
+  tfoot tr { background: rgba(240,192,64,0.05); border-top: 2px solid rgba(240,192,64,0.2); }
+  tfoot td { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--accent); font-size: 14px; padding: 16px; }
+  tfoot td:first-child { color: var(--text-muted); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .note { margin-top: 14px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+  .highlight-row td { background: rgba(240,192,64,0.04); }
+
+  /* Install banner */
+  #install-banner {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    z-index: 999;
+    max-width: 380px;
+    width: calc(100% - 40px);
+    animation: slideUp 0.4s ease both;
+  }
+
+  #install-banner.hidden { display: none !important; }
+
+  .install-text { flex: 1; font-size: 12px; color: var(--text); line-height: 1.5; }
+  .install-text strong { color: var(--accent); font-family: 'Syne', sans-serif; }
+
+  .install-btn {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+
+  .install-btn:hover { opacity: 0.85; }
+
+  .dismiss-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px;
+  }
+
+  @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="tag">⚡ Simulateur</div>
+    <h1>Coût de l'<span>énergie</span><br>sur 10 ans</h1>
+    <p class="subtitle">Projection avec hausse tarifaire annuelle personnalisable</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Paramètres</div>
+    <div class="inputs-grid">
+      <div class="input-group">
+        <label>Consommation annuelle</label>
+        <div class="input-wrapper">
+          <input type="number" id="kwh" value="5000" min="1" step="100">
+          <span class="unit">kWh</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Prix du kWh</label>
+        <div class="input-wrapper">
+          <input type="number" id="price" value="0.2516" min="0.001" step="0.001">
+          <span class="unit">€</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Hausse annuelle</label>
+        <div class="input-wrapper">
+          <input type="number" id="rate" value="5" min="0" max="50" step="0.1">
+          <span class="unit">%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <span class="slider-label">Taux d'augmentation annuel</span>
+        <span class="slider-value" id="slider-display">5.0 %</span>
+      </div>
+      <div class="slider-presets">
+        <button class="preset-btn" onclick="setRate(0)">0 % stable</button>
+        <button class="preset-btn" onclick="setRate(2)">+2 % faible</button>
+        <button class="preset-btn active" onclick="setRate(5)">+5 % moyen</button>
+        <button class="preset-btn" onclick="setRate(8)">+8 % élevé</button>
+        <button class="preset-btn" onclick="setRate(12)">+12 % fort</button>
+        <button class="preset-btn" onclick="setRate(20)">+20 % crise</button>
+      </div>
+      <input type="range" id="slider" min="0" max="30" step="0.1" value="5">
+      <div class="slider-ticks">
+        <span class="tick">0%</span>
+        <span class="tick">5%</span>
+        <span class="tick">10%</span>
+        <span class="tick">15%</span>
+        <span class="tick">20%</span>
+        <span class="tick">25%</span>
+        <span class="tick">30%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Résumé</div>
+    <div class="summary" id="summary"></div>
+    <p class="note"><span class="dot"></span>Taux appliqué : <strong style="color:var(--text);margin-left:4px" id="note-val">+5.0%</strong></p>
+  </div>
+
+  <div class="card" style="padding: 28px 28px 22px;">
+    <div class="card-title">Projection annuelle</div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>An</th>
+            <th>Prix kWh</th>
+            <th>Conso.</th>
+            <th>Coût annuel</th>
+            <th>Surcoût</th>
+            <th>Cumul</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Install banner -->
+<div id="install-banner" class="hidden">
+  <div class="install-text"><strong>⚡ Installer l'app</strong><br>Accès rapide depuis votre écran d'accueil, fonctionne hors-ligne.</div>
+  <button class="install-btn" id="install-btn">Installer</button>
+  <button class="dismiss-btn" id="dismiss-btn">✕</button>
+</div>
+
+<script>
+  const kwhInput   = document.getElementById('kwh');
+  const priceInput = document.getElementById('price');
+  const rateInput  = document.getElementById('rate');
+  const slider     = document.getElementById('slider');
+  const YEARS = 10;
+
+  function fmt(n, d = 2) {
+    return n.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  function setRate(val) {
+    rateInput.value = val;
+    slider.value = val;
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      const bv = parseFloat(b.getAttribute('onclick').match(/setRate\(([^)]+)\)/)[1]);
+      b.classList.toggle('active', bv === val);
+    });
+    update();
+  }
+
+  function syncSliderFromInput() {
+    const v = Math.min(30, Math.max(0, parseFloat(rateInput.value) || 0));
+    slider.value = v;
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    update();
+  }
+
+  function syncInputFromSlider() {
+    const v = parseFloat(slider.value);
+    rateInput.value = v;
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      const bv = parseFloat(b.getAttribute('onclick').match(/setRate\(([^)]+)\)/)[1]);
+      b.classList.toggle('active', bv === v);
+    });
+    update();
+  }
+
+  function update() {
+    const kwh  = parseFloat(kwhInput.value)  || 0;
+    const p0   = parseFloat(priceInput.value) || 0;
+    const rate = (parseFloat(rateInput.value) || 0) / 100;
+
+    document.getElementById('slider-display').textContent = fmt(rate * 100, 1) + ' %';
+    document.getElementById('note-val').textContent = '+' + fmt(rate * 100, 1) + '%';
+
+    const rows = [];
+    let cumul = 0;
+    for (let i = 0; i < YEARS; i++) {
+      const price = p0 * Math.pow(1 + rate, i);
+      const cost  = kwh * price;
+      cumul += cost;
+      rows.push({ year: i + 1, price, cost, cumul });
+    }
+
+    const baseCost   = rows[0].cost;
+    const lastCost   = rows[YEARS - 1].cost;
+    const totalCumul = rows[YEARS - 1].cumul;
+    const maxCost    = lastCost || 1;
+
+    document.getElementById('summary').innerHTML = `
+      <div class="stat">
+        <div class="stat-label">Coût — Année 1</div>
+        <div class="stat-value">${fmt(baseCost)} €</div>
+        <div class="stat-sub">${fmt(kwh, 0)} kWh × ${fmt(p0, 4)} €</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Coût — Année 10</div>
+        <div class="stat-value">${fmt(lastCost)} €</div>
+        <div class="stat-sub">${baseCost > 0 ? '+' + fmt((lastCost / baseCost - 1) * 100, 1) + '% vs. départ' : '—'}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total sur 10 ans</div>
+        <div class="stat-value">${fmt(totalCumul)} €</div>
+        <div class="stat-sub">${fmt(totalCumul - baseCost * YEARS)} € de surcoût</div>
+      </div>
+    `;
+
+    document.getElementById('tbody').innerHTML = rows.map((r, i) => {
+      const delta  = r.cost - baseCost;
+      const barPct = (r.cost / maxCost) * 100;
+      return `<tr class="${i === YEARS - 1 ? 'highlight-row' : ''}" style="animation-delay:${i * 0.035}s">
+        <td><span class="year-badge">${r.year}</span></td>
+        <td class="price-col">${fmt(r.price, 4)} €</td>
+        <td class="price-col">${fmt(kwh, 0)} kWh</td>
+        <td class="cost-col">${fmt(r.cost)} €</td>
+        <td class="delta-col">${i === 0 ? '—' : '+' + fmt(delta) + ' €'}</td>
+        <td class="cumul-col">
+          <div class="bar-cell">
+            ${fmt(r.cumul)} €
+            <div class="bar-bg"><div class="bar-fill" style="width:${barPct}%"></div></div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('tfoot').innerHTML = `
+      <tr>
+        <td colspan="5">Total cumulé sur 10 ans</td>
+        <td>${fmt(totalCumul)} €</td>
+      </tr>
+    `;
+  }
+
+  kwhInput.addEventListener('input', update);
+  priceInput.addEventListener('input', update);
+  rateInput.addEventListener('input', syncSliderFromInput);
+  slider.addEventListener('input', syncInputFromSlider);
+  update();
+
+  // PWA Install
+  let deferredPrompt;
+  const banner = document.getElementById('install-banner');
+  const installBtn = document.getElementById('install-btn');
+  const dismissBtn = document.getElementById('dismiss-btn');
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    banner.classList.remove('hidden');
+  });
+
+  installBtn.addEventListener('click', async () => {
+    banner.classList.add('hidden');
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    }
+  });
+
+  dismissBtn.addEventListener('click', () => banner.classList.add('hidden'));
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
